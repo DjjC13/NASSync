@@ -1,0 +1,4 @@
+# NASSync runtime dependencies.
+# The core engine (nassync.scanner / planner / executor) uses only the standard
+# library -- PySide6 is required for the GUI only.
+PySide6>=6.6
