@@ -8,7 +8,7 @@ size from a 16px window icon upward.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QByteArray, QRectF, Qt
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QRectF, Qt
 from PySide6.QtGui import QIcon, QImage, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 
@@ -63,3 +63,46 @@ def write_svg(path) -> None:
     from pathlib import Path
 
     Path(path).write_text(LOGO_SVG, encoding="utf-8")
+
+
+#: Sizes Windows picks between for the taskbar, Explorer, and Alt-Tab.
+ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
+
+
+def write_ico(path, sizes=ICO_SIZES) -> None:
+    """Write the mark as a multi-resolution .ico for the packaged executable.
+
+    Qt's own ICO writer stores a single image, which leaves Windows rescaling
+    one bitmap for every context. This assembles a proper multi-size icon with
+    PNG-compressed entries instead, so Explorer and the taskbar each get a
+    rendering drawn at their own size.
+    """
+    from pathlib import Path
+
+    images: list[tuple[int, bytes]] = []
+    for size in sizes:
+        buffer = QBuffer()
+        buffer.open(QIODevice.WriteOnly)
+        logo_pixmap(size).toImage().save(buffer, "PNG")
+        images.append((size, bytes(buffer.data())))
+
+    header = b"\x00\x00\x01\x00" + len(images).to_bytes(2, "little")
+    offset = len(header) + 16 * len(images)
+
+    directory = b""
+    for size, data in images:
+        directory += bytes(
+            [
+                0 if size >= 256 else size,  # 0 encodes 256 in the ICO header
+                0 if size >= 256 else size,
+                0,  # palette size: 0 for true colour
+                0,  # reserved
+            ]
+        )
+        directory += (1).to_bytes(2, "little")   # colour planes
+        directory += (32).to_bytes(2, "little")  # bits per pixel
+        directory += len(data).to_bytes(4, "little")
+        directory += offset.to_bytes(4, "little")
+        offset += len(data)
+
+    Path(path).write_bytes(header + directory + b"".join(img for _, img in images))

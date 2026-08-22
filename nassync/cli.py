@@ -146,6 +146,12 @@ def command_run(args) -> int:
 
     destructive = sum(1 for i in actionable if i.action.is_destructive)
     if not args.yes:
+        if sys.stdin is None:
+            print(
+                "No console is attached, so the confirmation prompt cannot be "
+                "shown. Re-run with --yes to proceed, or use the interface."
+            )
+            return 1
         print(
             f"\nAbout to change {len(actionable)} item(s), "
             f"including {destructive} deletion(s)."
@@ -257,7 +263,27 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _attach_streams() -> None:
+    """Give a windowed build somewhere for its output to go.
+
+    A PyInstaller ``--windowed`` executable has no console attached, so
+    sys.stdout and sys.stderr are None and the very first print() would raise.
+    Pointing them at a log file keeps the command line usable from the packaged
+    executable, and captures any traceback that would otherwise vanish.
+    """
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    from .config import app_dir
+
+    handle = open(app_dir() / "console.log", "a", encoding="utf-8", buffering=1)
+    if sys.stdout is None:
+        sys.stdout = handle
+    if sys.stderr is None:
+        sys.stderr = handle
+
+
 def main(argv: list[str] | None = None) -> int:
+    _attach_streams()
     parser = build_parser()
     args = parser.parse_args(argv)
 

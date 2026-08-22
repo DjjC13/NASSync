@@ -1,0 +1,4 @@
+# Tooling for building the packaged executable.
+# The application itself needs only requirements.txt.
+-r requirements.txt
+pyinstaller>=6.0

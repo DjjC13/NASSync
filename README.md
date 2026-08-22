@@ -101,8 +101,9 @@ anything else.
 ## Requirements
 
 - Windows (the copy engine is `robocopy`, and share enumeration uses `netapi32`)
-- Python 3.11+
 - An account with access to both servers — see [Credentials](#credentials)
+- Python 3.11+ **only if running from source**; the packaged executable bundles
+  its own interpreter and needs nothing installed
 
 ## Credentials
 
@@ -134,6 +135,23 @@ says so rather than yanking the connection away.
 
 ## Install and run
 
+### The packaged executable
+
+Download `NASSync.exe` from the [latest release](../../releases/latest) and
+double-click it. There is nothing to install — Python and Qt are bundled inside
+the single file.
+
+Two things to expect the first time:
+
+- **Windows SmartScreen will warn that the publisher is unrecognised.** The
+  executable is not code-signed, so this is expected rather than a sign that
+  anything is wrong. Choose **More info → Run anyway**, or right-click the file
+  → **Properties → Unblock** before launching.
+- **The first launch takes a few seconds.** A one-file build unpacks itself to
+  a temporary folder before the window appears; later launches are quicker.
+
+### From source
+
 ```sh
 git clone <your-fork-url> NASSync
 cd NASSync
@@ -142,6 +160,24 @@ python -m venv .venv
 pip install -r requirements.txt
 
 python -m nassync
+```
+
+Running from source is also the only way to use the command line below: the
+packaged build has no console attached.
+
+## Building the executable
+
+```sh
+pip install -r requirements-dev.txt
+pyinstaller NASSync.spec
+```
+
+The result is `dist/NASSync.exe` — one file, no installer. Build configuration
+lives in `NASSync.spec`; the icon in `docs/logo.ico` is generated from the same
+SVG the GUI draws its logo from:
+
+```sh
+python -c "from PySide6.QtGui import QGuiApplication; QGuiApplication([]); from nassync.gui.branding import write_ico; write_ico('docs/logo.ico')"
 ```
 
 ![Connecting to both servers](docs/screenshot-connect.png)

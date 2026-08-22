@@ -43,6 +43,11 @@ def extended(path: str) -> str:
     """
     if path.startswith(_EXTENDED_PREFIX):
         return path
+    # The \\?\ prefix turns off all path parsing, which includes translating
+    # forward slashes. Anything still holding them -- a path typed at the
+    # command line, or one that came from a tool that speaks POSIX -- has to be
+    # normalised here or every call against it fails with "path not found".
+    path = path.replace("/", "\\")
     if path.startswith("\\\\"):
         return _EXTENDED_UNC_PREFIX + path[2:]
     return _EXTENDED_PREFIX + path
